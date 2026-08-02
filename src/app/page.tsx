@@ -1,14 +1,20 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { RouteSelectionPanel } from "@/components/RouteSelectionPanel";
 import { TravelGlobe } from "@/components/TravelGlobe";
+import { createTrip } from "@/lib/api/travelAgentClient";
+import { localTripRepository } from "@/lib/trip/repository";
 import type { SelectedCountry, SelectionStep } from "@/types/travel";
 
 export default function HomePage() {
+  const router = useRouter();
   const [origin, setOrigin] = useState<SelectedCountry | null>(null);
   const [destination, setDestination] = useState<SelectedCountry | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [continueError, setContinueError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
 
   const selectionStep: SelectionStep = useMemo(() => {
     if (!origin) return "origin";
@@ -25,17 +31,46 @@ export default function HomePage() {
   const handleReset = useCallback(() => {
     setOrigin(null);
     setDestination(null);
+    setContinueError(null);
   }, []);
 
   const handleContinue = useCallback(() => {
-    if (!origin || !destination) return;
+    if (!origin || !destination || isPending) return;
+    setContinueError(null);
 
-    // TODO: Begin the AI travel-agent workflow with the selected origin and destination.
-    console.log("Continue journey", {
-      origin,
-      destination,
+    startTransition(async () => {
+      try {
+        const created = await createTrip({
+          origin_country: origin.name,
+          destination_country: destination.name,
+        });
+
+        localTripRepository.clearTrip();
+        localTripRepository.saveRouteSelection({
+          tripId: created.trip_id,
+          threadId: created.thread_id,
+          origin: {
+            name: origin.name,
+            isoCode: origin.isoCode,
+            coordinates: origin.coordinates,
+          },
+          destination: {
+            name: destination.name,
+            isoCode: destination.isoCode,
+            coordinates: destination.coordinates,
+          },
+        });
+
+        router.push("/trip");
+      } catch (error) {
+        setContinueError(
+          error instanceof Error
+            ? error.message
+            : "Could not start trip planning. Is the Python backend running on port 8000?",
+        );
+      }
     });
-  }, [origin, destination]);
+  }, [origin, destination, isPending, router]);
 
   return (
     <div className="relative h-dvh w-full overflow-hidden bg-[#070b10] text-[#f3efe6]">
@@ -76,6 +111,21 @@ export default function HomePage() {
         onReset={handleReset}
         onContinue={handleContinue}
       />
+
+      {(continueError || isPending) && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-28 z-50 flex justify-center px-4 md:bottom-32">
+          <p
+            className={`pointer-events-auto rounded-xl border px-4 py-2 text-sm backdrop-blur-md ${
+              continueError
+                ? "border-red-400/30 bg-red-950/70 text-red-100"
+                : "border-white/10 bg-[#101820]/85 text-[#d7dde3]"
+            }`}
+            role="status"
+          >
+            {continueError ?? "Starting travel planner…"}
+          </p>
+        </div>
+      )}
 
       <span className="sr-only" aria-live="polite">
         {mapLoaded ? "Globe ready" : "Globe loading"}

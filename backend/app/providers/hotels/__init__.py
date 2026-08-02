@@ -1,0 +1,1 @@
+"""Hotels provider module initialization."""

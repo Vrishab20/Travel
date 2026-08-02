@@ -1,0 +1,1 @@
+"""Flights provider module initialization."""
