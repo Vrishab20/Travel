@@ -1,65 +1,100 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useCallback, useMemo, useState } from "react";
+import { RouteSelectionPanel } from "@/components/RouteSelectionPanel";
+import { TravelGlobe } from "@/components/TravelGlobe";
+import type { SelectedCountry, SelectionStep } from "@/types/travel";
+
+export default function HomePage() {
+  const [origin, setOrigin] = useState<SelectedCountry | null>(null);
+  const [destination, setDestination] = useState<SelectedCountry | null>(null);
+  const [mapLoaded, setMapLoaded] = useState(false);
+
+  const selectionStep: SelectionStep = useMemo(() => {
+    if (!origin) return "origin";
+    if (!destination) return "destination";
+    return "complete";
+  }, [origin, destination]);
+
+  const handleSwap = useCallback(() => {
+    if (!origin || !destination) return;
+    setOrigin(destination);
+    setDestination(origin);
+  }, [origin, destination]);
+
+  const handleReset = useCallback(() => {
+    setOrigin(null);
+    setDestination(null);
+  }, []);
+
+  const handleContinue = useCallback(() => {
+    if (!origin || !destination) return;
+
+    // TODO: Begin the AI travel-agent workflow with the selected origin and destination.
+    console.log("Continue journey", {
+      origin,
+      destination,
+    });
+  }, [origin, destination]);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <div className="relative h-dvh w-full overflow-hidden bg-[#070b10] text-[#f3efe6]">
+      <header className="pointer-events-none absolute inset-x-0 top-0 z-40">
+        <div className="pointer-events-auto flex items-start justify-between px-5 pb-3 pt-[max(1rem,env(safe-area-inset-top))] md:px-8 md:pt-6">
+          <div>
+            <p className="font-[family-name:var(--font-fraunces)] text-3xl tracking-[0.04em] text-[#f3efe6] md:text-4xl">
+              Atlas
+            </p>
+            <p className="mt-1 text-sm text-[#9aa7b2]">Plan your next journey</p>
+          </div>
+
+          <button
+            type="button"
+            aria-label="Open settings menu"
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-[#101820]/85 text-[#f3efe6] shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur-md transition hover:border-[#c9a66b]/45 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#c9a66b]"
+          >
+            <MenuIcon />
+          </button>
+        </div>
+      </header>
+
+      <main className="absolute inset-0">
+        <TravelGlobe
+          origin={origin}
+          destination={destination}
+          onOriginChange={setOrigin}
+          onDestinationChange={setDestination}
+          onMapLoadedChange={setMapLoaded}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
       </main>
+
+      <RouteSelectionPanel
+        origin={origin}
+        destination={destination}
+        selectionStep={selectionStep}
+        onSwap={handleSwap}
+        onReset={handleReset}
+        onContinue={handleContinue}
+      />
+
+      <span className="sr-only" aria-live="polite">
+        {mapLoaded ? "Globe ready" : "Globe loading"}
+        {origin ? `, origin ${origin.name}` : ""}
+        {destination ? `, destination ${destination.name}` : ""}
+      </span>
     </div>
+  );
+}
+
+function MenuIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+      <path
+        d="M3.5 5.5h11M3.5 9h11M3.5 12.5h11"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </svg>
   );
 }
