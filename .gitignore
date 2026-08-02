@@ -23,6 +23,7 @@
 # misc
 .DS_Store
 *.pem
+prompt.md
 
 # debug
 npm-debug.log*
@@ -41,3 +42,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# python backend
+backend/.venv/
+backend/**/__pycache__/
+backend/**/*.py[cod]
+backend/.pytest_cache/
+backend/*.egg-info/
+backend/dist/
+backend/build/
